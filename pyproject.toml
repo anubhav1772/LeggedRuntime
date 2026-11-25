@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "legged-runtime"
+version = "0.1.0"
+description = "A modular runtime for sim-to-sim evaluation and ROS 2 deployment of learned legged robot policies."
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "numpy",
+    "mujoco",
+    "onnxruntime",
+    "pyyaml",
+]
+
+[tool.setuptools.packages.find]
+include = ["legged_runtime*"]
