@@ -13,10 +13,14 @@ initial_state:
   base_quat: [1.0, 0.0, 0.0, 0.0]
 
 policy:
+  type: whole_body
+  source: Ego-VCP
+
   obs_dim: 1060
   action_dim: 29
   history_length: 10
   single_obs_dim: 106
+
   action_scale: 0.25
   clip_actions: 100.0
   clip_observations: 100.0

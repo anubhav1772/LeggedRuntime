@@ -10,7 +10,7 @@ from legged_runtime.controllers.position_controller import PositionController
 
 ROOT = Path(__file__).resolve().parents[1]
 
-with open(ROOT / "configs/ego_vcp_g1.yaml") as f:
+with open(ROOT / "configs/g1_whole_body.yaml") as f:
     cfg = yaml.safe_load(f)
 
 
