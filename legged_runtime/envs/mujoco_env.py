@@ -1,7 +1,7 @@
 import mujoco
 import mujoco.viewer
 import numpy as np
-
+import time
 
 class MujocoEnv:
 
@@ -47,4 +47,5 @@ class MujocoEnv:
     def close(self):
         if self.viewer is not None:
             self.viewer.close()
+            time.sleep(0.5)
             self.viewer = None
