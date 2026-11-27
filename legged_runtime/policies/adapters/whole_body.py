@@ -37,10 +37,12 @@ class WholeBodyPolicyAdapter:
         self.velocity_command = np.asarray(cfg["commands"]["velocity"], dtype=np.float32)
         self.wb_command = np.asarray(cfg["commands"]["whole_body"], dtype=np.float32)
 
-        self.base_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "pelvis")
+        base_name = cfg["bodies"]["base"]
+
+        self.base_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, base_name)
 
         if self.base_id < 0:
-            raise ValueError("Pelvis body not found")
+            raise ValueError(f"Base body '{base_name}' not found")
 
     def reset(self):
         self.last_action.fill(0.0)
@@ -63,6 +65,10 @@ class WholeBodyPolicyAdapter:
         gravity = gravity / np.linalg.norm(gravity)
 
         return rotation.T @ gravity
+
+    @property
+    def torso_height_command(self):
+        return float(self.wb_command[-1])
 
     def set_commands(self, velocity_command, wb_command):
         self.velocity_command[:] = velocity_command
@@ -102,3 +108,10 @@ class WholeBodyPolicyAdapter:
 
     def update_action(self, action):
         self.last_action[:] = action
+
+    def get_evaluation_commands(self):
+        return {
+            "velocity_command": self.velocity_command.copy(),
+            "whole_body_command": self.wb_command.copy(),
+            "torso_height_command": self.torso_height_command,
+        }
