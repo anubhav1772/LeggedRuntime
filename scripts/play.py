@@ -12,6 +12,9 @@ from legged_runtime.controllers.position_controller import PositionController
 from legged_runtime.policies.onnx_policy import ONNXPolicy
 from legged_runtime.policies.adapters.whole_body import WholeBodyPolicyAdapter
 
+from legged_runtime.evaluation.recorder import TrajectoryRecorder
+from legged_runtime.evaluation.state_extractor import MujocoStateExtractor
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -22,6 +25,8 @@ parser.add_argument("--vy", type=float, default=None)
 parser.add_argument("--wz", type=float, default=None)
 parser.add_argument("--headless", action="store_true")
 parser.add_argument("--duration", type=float, default=20.0)
+parser.add_argument("--record", type=str, default=None, help="Directory for saving evaluation results.")
+parser.add_argument("--warmup", type=float, default=None, help="Warmup duration excluded from tracking metrics.")
 
 args = parser.parse_args()
 
@@ -74,10 +79,25 @@ def main():
     policy = ONNXPolicy(ROOT / cfg["policy_path"])
     adapter = WholeBodyPolicyAdapter(env.model, env.data, cfg)
 
+    recorder = None
+    state_extractor = None
+
+    if args.record is not None:
+        evaluation_cfg = cfg["evaluation"]
+
+        if args.warmup is not None:
+            evaluation_cfg["warmup_s"] = args.warmup
+
+        state_extractor = MujocoStateExtractor(env.model, env.data, cfg)
+        recorder = TrajectoryRecorder(evaluation_cfg)
+
     # Override velocity commands using CLI arguments.
     for i, value in enumerate([args.vx, args.vy, args.wz]):
         if value is not None:
             adapter.velocity_command[i] = value
+
+    # Preserve the effective commands in the experiment configuration.
+    cfg["commands"]["velocity"] = adapter.velocity_command.tolist()
 
     # Initialize robot.
     env.reset()
@@ -121,42 +141,60 @@ def main():
     np.testing.assert_allclose(obs[19:77], 0.0, atol=1e-5)
 
     step = 0
+    termination = "duration"
+    rollout_start = time.perf_counter()
 
     try:
         if not args.headless:
             env.render()
 
+        rollout_start = time.perf_counter()
+
         while env.data.time < args.duration:
             if not args.headless and not env.is_running:
+                termination = "viewer_closed"
                 break
 
             start = time.perf_counter()
+            observation_time = env.data.time
 
-            # Refresh derived state quantities.
-            mujoco.mj_forward(env.model, env.data)
-
-            # Construct stacked policy observation.
+            # Construct policy observation.
             obs = adapter.compute_observation()
 
-            # Run policy inference.
+            # Measure inference latency.
+            inference_start = time.perf_counter()
             action = policy(obs)
+            inference_latency = (time.perf_counter() - inference_start) * 1000.0
 
             if not np.all(np.isfinite(action)):
                 raise RuntimeError("Policy produced non-finite actions")
 
-            # Convert policy action to joint position targets.
             target_pos = controller.process_action(
                 action,
                 scale=cfg["policy"]["action_scale"],
                 clip=cfg["policy"]["clip_actions"]
             )
 
-            # Apply targets and advance simulation.
+            # Advance simulation.
             controller.apply(target_pos)
             env.step(n_steps=decimation)
 
-            # Save raw actions for the next observation.
+            # Refresh derived quantities for the resulting state.
+            mujoco.mj_forward(env.model, env.data)
+
             adapter.update_action(action)
+
+            # Record evaluation data.
+            if recorder is not None:
+                recorder.record(
+                    observation_time=observation_time,
+                    observation=obs,
+                    action=action,
+                    target_pos=target_pos,
+                    inference_latency=inference_latency,
+                    **adapter.get_evaluation_commands(),
+                    **state_extractor.get_state()
+                )
 
             if not args.headless:
                 env.render()
@@ -170,7 +208,6 @@ def main():
 
             step += 1
 
-            # Real-time synchronization for visualization.
             if not args.headless:
                 elapsed = time.perf_counter() - start
 
@@ -178,10 +215,22 @@ def main():
                     time.sleep(policy_dt - elapsed)
 
     except KeyboardInterrupt:
+        termination = "interrupted"
         print("\n[INFO] Simulation interrupted by user.")
 
     finally:
+        rollout_end = time.perf_counter()
         env.close()
+
+    if recorder is not None and recorder.records:
+        wall_time = rollout_end - rollout_start
+        output_dir = ROOT / args.record
+
+        recorder.save(output_dir, wall_time, termination=termination)
+
+        # Preserve the deployment configuration used for this experiment.
+        with open(output_dir / "config.yaml", "w") as f:
+            yaml.safe_dump(cfg, f, sort_keys=False)
 
 
 if __name__ == "__main__":
