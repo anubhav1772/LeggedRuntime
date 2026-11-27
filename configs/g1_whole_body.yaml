@@ -1,5 +1,9 @@
 robot: unitree_g1
 
+bodies:
+  base: pelvis
+  torso: torso_link
+
 model_path: assets/robots/unitree_g1/scene_white.xml
 policy_path: checkpoints/g1/flat/policy.onnx
 metadata_path: checkpoints/g1/flat/deployment_info.json
@@ -109,3 +113,18 @@ commands:
 
   # Left hand xyz, right hand xyz, roll, pitch, yaw, height
   whole_body: [0.20, 0.25, 0.15, 0.20, -0.25, 0.15, 0.0, 0.0, 0.0, 0.80]
+
+evaluation:
+  warmup_s: 2.0
+
+  fall_detection:
+    enabled: true
+    min_base_height: 0.45
+    max_base_tilt_deg: 60.0
+
+  metrics:
+    velocity_tracking: true
+    base_stability: true
+    torso_height_tracking: true
+    inference_latency: true
+    real_time_factor: true
