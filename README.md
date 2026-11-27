@@ -185,24 +185,40 @@ LeggedRuntime/
 
 ## Current Development Status
 
+### Phase 1 — Core Runtime
 - [x] MuJoCo simulation infrastructure
 - [x] ONNX policy inference
 - [x] Configurable joint position control
-- [x] Cross-simulator joint mapping
+- [x] Cross-simulator joint and actuator mapping
 - [x] Observation history buffer
 - [x] Whole-body policy adapter
 - [x] Isaac Lab deployment metadata validation
 - [x] Closed-loop Unitree G1 policy execution
 - [x] Preliminary standing and locomotion validation
 - [x] Headless simulation
-- [ ] Interactive keyboard teleoperation
+
+### Phase 2 — Policy Evaluation
 - [ ] Quantitative policy evaluation
+- [ ] Trajectory recording and visualization
+- [ ] Programmatic command scheduling
+
+### Phase 3 — Simulation Environments
 - [ ] Configurable terrains and dynamic environments
+- [ ] Contact force and sensor interfaces
+- [ ] Egocentric camera integration
+
+### Phase 4 — Policy and Robot Generalization
 - [ ] TorchScript policy support
-- [ ] Multiple robot embodiments
+- [ ] Multiple robot embodiments and policy adapters
+
+### Phase 5 — Deployment
 - [ ] ROS 2 integration
 - [ ] RViz visualization
+
+### Phase 6 — Advanced Control
+- [ ] Hierarchical policy execution
 - [ ] High-level policy and world-model integration
+- [ ] Contact-rich whole-body control evaluation
 
 ## Acknowledgements
 
