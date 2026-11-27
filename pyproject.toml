@@ -16,5 +16,15 @@ dependencies = [
     "pyyaml",
 ]
 
+[project.optional-dependencies]
+visualization = [
+    "matplotlib>=3.6",
+]
+video = [
+    "matplotlib>=3.6",
+    "imageio",
+    "imageio-ffmpeg",
+]
+
 [tool.setuptools.packages.find]
 include = ["legged_runtime*"]
